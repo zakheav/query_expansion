@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<recipe>
+    <worker>
+        <num>2</num>
+    </worker>
+    <master>
+        <ip>127.0.0.1</ip>
+        <port>8080</port>
+        <setSize>0,2</setSize>
+        <support>20</support>
+        <iterationTimes>10</iterationTimes>
+    </master>
+</recipe>
