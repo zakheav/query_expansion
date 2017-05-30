@@ -107,12 +107,17 @@ public class DBHelper {
     }
 
     public static void storeTransaction(List<String> transaction, int counter, String title) {
+//        for (String item : transaction) {
+//            System.out.print(item + " ");
+//        }
+//        System.out.println();
+
         MongoCollection<Document> collection = database.getCollection("transactions");
         collection.insertOne(new Document("data", transaction).append("counter", counter).append("title", title));
     }
 
     public static void clearCollections(String collectionName) {
-        if(collectionName.equals("*")) {
+        if (collectionName.equals("*")) {
             database.getCollection("word").drop();
             database.getCollection("df").drop();
             database.getCollection("transactions").drop();

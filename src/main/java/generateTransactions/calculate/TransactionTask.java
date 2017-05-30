@@ -66,15 +66,20 @@ public class TransactionTask implements Runnable {
             for (ptr2 = ptr1; ptr2 < temp.size() && (tfidf - temp.get(ptr2).tfidf <= 2 || ptr2 - ptr1 < 5) && ptr2 - ptr1 < 12; ++ptr2) {
                 transaction.add(temp.get(ptr2));
             }
-            transactions.add(transaction);
+            if (transaction.size() >= 5)
+                transactions.add(transaction);
             ptr1 = ptr2;
         }
 
         // rebuild the correlations between transactions over this article
+        List<Integer> originSizeList = new ArrayList<>();
         for (int i = 0; i < transactions.size(); ++i) {
-            int transactionSize = transactions.get(i).size();
+            originSizeList.add(transactions.get(i).size());
+        }
+        for (int i = 0; i < transactions.size(); ++i) {
+            int transactionSize = originSizeList.get(i);
             for (int j = 0; j < transactions.size(); ++j) {
-                if (i != j) {
+                if (i != j && transactions.get(j).size() < 17) {
                     transactions.get(j).add(transactions.get(i).get(0));
 
                     // introduce randomness
@@ -104,5 +109,6 @@ public class TransactionTask implements Runnable {
             int freq = (int) tfidfSum / t.size();
             DBHelper.storeTransaction(t, freq, title);
         }
+        // System.out.println("-------------------------------");
     }
 }

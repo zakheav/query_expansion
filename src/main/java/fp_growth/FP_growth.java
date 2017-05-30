@@ -14,6 +14,7 @@ public class FP_growth {
         this.FPTree = new FP_tree(new DBDataSource(id), dataFilter);
         this.dataFilter = dataFilter;
         this.setSize_u = setSize_u;
+        System.out.println("fp tree build finish");
     }
 
     @SuppressWarnings("unchecked")

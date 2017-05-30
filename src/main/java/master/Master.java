@@ -42,7 +42,7 @@ public class Master {
     private final int support;
     public final int times;
     private final List<Integer> setSizeList;
-    private List<FreqSetObject> freqSetList;
+    private List<List<FreqSetObject>> freqSetList;
 
     private Logger log;
 
@@ -69,14 +69,17 @@ public class Master {
             ackList.add(null);
         }
 
-        freqSetList = new ArrayList<>();
-
         Map<String, String> masterConf = XML.masterConf();
         port = Integer.parseInt(masterConf.get("port"));
         ip = masterConf.get("ip");
         // the support number of the fp-growth algorithm
         support = Integer.parseInt(masterConf.get("support"));
         times = Integer.parseInt(masterConf.get("iterationTimes"));
+
+        freqSetList = new ArrayList<>();
+        for (int i = 0; i < times; ++i) {
+            freqSetList.add(new ArrayList<>());
+        }
 
         // the fp-growth algorithm will run few rounds, setSizeList determine the frequent set size at each round
         setSizeList = new ArrayList<>();
@@ -123,7 +126,7 @@ public class Master {
         }
     }
 
-    public Master waitFinish() {
+    public Master waitFinish(int iterateId) {
         Map<String, Integer> dataFilter = initDataFilter();// key is frequent item, value is its frequent
 
         for (int i = 1; i < setSizeList.size(); ++i) {
@@ -143,7 +146,7 @@ public class Master {
             waitRecvAllAck();
             System.out.println("worker fp-growth finish round:" + i);
 
-            dataFilter = processWorkerData(); // analyse the workers data
+            dataFilter = processWorkerData(iterateId); // analyse the workers data
 
             for (int j = 0; j < workersNum; ++j) {
                 ackList.set(j, null);
@@ -157,8 +160,15 @@ public class Master {
 
         waitRecvAllAck();
 
+        socketList = new ArrayList<>();
+        ackList = new ArrayList<>();
+        for (int i = 0; i < workersNum; ++i) {
+            ackList.add(null);
+        }
+        DBHelper.clearCollections("transactions");
+
         System.out.println("fp-growth finished successfully");
-        // ThreadPool.getInstance().shutDown();
+
         return this;
     }
 
@@ -194,8 +204,8 @@ public class Master {
         return set;
     }
 
-    private void deleteSubFreqSet(Set<String> freqSet) {
-        Iterator<FreqSetObject> it = freqSetList.iterator();
+    private void deleteSubFreqSet(Set<String> freqSet, int iterateId) {
+        Iterator<FreqSetObject> it = freqSetList.get(iterateId).iterator();
         while (it.hasNext()) {
             Set<String> oldFreqSet = it.next().freqSet;
             boolean isSubSet = true;
@@ -211,7 +221,7 @@ public class Master {
         }
     }
 
-    private Map<String, Integer> processWorkerData() {
+    private Map<String, Integer> processWorkerData(int iterateId) {
         Map<String, Integer> dataFilter = new HashMap<>();
         Map<String, Integer> temp = new HashMap<>();// this is candidate frequent set list
         for (int i = 0; i < workersNum; ++i) {
@@ -242,9 +252,9 @@ public class Master {
                 if (items.length > 1) {
                     Set<String> newFreqSet = arrToSet(items);
 
-                    deleteSubFreqSet(newFreqSet);
+                    deleteSubFreqSet(newFreqSet, iterateId);
                     // add new freqSet
-                    freqSetList.add(new FreqSetObject(newFreqSet, freq));
+                    freqSetList.get(iterateId).add(new FreqSetObject(newFreqSet, freq));
                 }
 
                 // update the dataFilter
@@ -255,22 +265,6 @@ public class Master {
             }
         }
         return dataFilter;
-    }
-
-    public Master display() {
-        int counter = 0;
-        for (FreqSetObject freqSetObject : freqSetList) {
-            Set<String> freqSet = freqSetObject.freqSet;
-            int freq = freqSetObject.freq;
-            for (String item : freqSet) {
-                System.out.print(item + " ");
-            }
-            System.out.print("   :" + freq);
-            System.out.println();
-            ++counter;
-        }
-        System.out.println("total number: " + counter);
-        return this;
     }
 
     class LengthComparator implements Comparator<String> {
@@ -297,11 +291,11 @@ public class Master {
         }
     }
 
-    public List<ItemFreq> getTopicGroup(String topic) {
+    public List<ItemFreq> getTopicGroup(String topic, int iterateId) {
         List<String> temp = new ArrayList<>();
         Map<String, Integer> map = new HashMap<>();
         Set<String> set = new HashSet<>();// use to remove duplicate item
-        for (FreqSetObject freqSetObject : freqSetList) {
+        for (FreqSetObject freqSetObject : freqSetList.get(iterateId)) {
             Set<String> freqSet = freqSetObject.freqSet;
             boolean correlate = false;
             for (String item : freqSet) {
@@ -341,71 +335,56 @@ public class Master {
         return results;
     }
 
-    public void finish() {
-        socketList = new ArrayList<>();
+    public List<ItemFreq> resultsMerge(List<List<ItemFreq>> iterationResults) {
+        List<ItemFreq> result = new ArrayList<>();
 
-        ackList = new ArrayList<>();
-        for (int i = 0; i < workersNum; ++i) {
-            ackList.add(null);
-        }
-        freqSetList = new ArrayList<>();
-        DBHelper.clearCollections("transactions");
-    }
-
-    public Map<String, List<ItemFreq>> resultsMerge(Map<String, List<List<ItemFreq>>> iterationResults) {
-        Map<String, List<ItemFreq>> results = new HashMap<>();
-        for (String topic : iterationResults.keySet()) {
-            results.put(topic, new ArrayList<>());
-        }
-        for (String topic : iterationResults.keySet()) {
-            int iterationTimes = iterationResults.get(topic).size();
-            Map<String, ItemFreq> item_itemFreqMap = new HashMap<>();
-            Map<String, Integer> filter1 = new HashMap<>();// use to remove the noise
-            Set<String> filter2 = new HashSet<>();// use to reject duplicate item
-            for (List<ItemFreq> freqSet : iterationResults.get(topic)) {
-                // add the correct frequent items into the results
-                for (int i = 0; i < 5 && i < freqSet.size(); ++i) {
-                    String item = freqSet.get(i).item;
-                    if (!filter2.contains(item)) {
-                        results.get(topic).add(freqSet.get(i));
-                        filter2.add(item);
-                    }
-                    if (!item_itemFreqMap.containsKey(item)) {
-                        item_itemFreqMap.put(item, freqSet.get(i));
-                    }
-                    int oldFreq = item_itemFreqMap.get(item).freq;
-                    item_itemFreqMap.get(item).freq = (freqSet.get(i).freq + oldFreq) / 2;
+        int iterationTimes = times;
+        Map<String, ItemFreq> item_itemFreqMap = new HashMap<>();
+        Map<String, Integer> filter1 = new HashMap<>();// use to remove the noise
+        Set<String> filter2 = new HashSet<>();// use to reject duplicate item
+        for (List<ItemFreq> freqSet : iterationResults) {
+            // add the correct frequent items into the results
+            for (int i = 0; i < 5 && i < freqSet.size(); ++i) {
+                String item = freqSet.get(i).item;
+                if (!filter2.contains(item)) {
+                    result.add(freqSet.get(i));
+                    filter2.add(item);
                 }
-                // count the number of candidate frequent item
-                for (int i = 5; i < freqSet.size(); ++i) {
-                    String item = freqSet.get(i).item;
-                    if (!filter1.containsKey(item)) {
-                        filter1.put(item, 0);
-                    }
-                    int oldCounter = filter1.get(freqSet.get(i).item);
-                    filter1.put(freqSet.get(i).item, oldCounter + 1);
-
-                    if (!item_itemFreqMap.containsKey(item)) {
-                        item_itemFreqMap.put(item, freqSet.get(i));
-                    }
-                    int oldFreq = item_itemFreqMap.get(item).freq;
-                    item_itemFreqMap.get(item).freq = (freqSet.get(i).freq + oldFreq) / 2;
+                if (!item_itemFreqMap.containsKey(item)) {
+                    item_itemFreqMap.put(item, freqSet.get(i));
                 }
+                int oldFreq = item_itemFreqMap.get(item).freq;
+                item_itemFreqMap.get(item).freq = (freqSet.get(i).freq + oldFreq) / 2;
             }
-            for (String item : filter1.keySet()) {
-                if (!filter2.contains(item) && filter1.get(item) == iterationTimes) {
-                    results.get(topic).add(item_itemFreqMap.get(item));
+            // count the number of candidate frequent item
+            for (int i = 5; i < freqSet.size(); ++i) {
+                String item = freqSet.get(i).item;
+                if (!filter1.containsKey(item)) {
+                    filter1.put(item, 0);
                 }
+                int oldCounter = filter1.get(freqSet.get(i).item);
+                filter1.put(freqSet.get(i).item, oldCounter + 1);
+
+                if (!item_itemFreqMap.containsKey(item)) {
+                    item_itemFreqMap.put(item, freqSet.get(i));
+                }
+                int oldFreq = item_itemFreqMap.get(item).freq;
+                item_itemFreqMap.get(item).freq = (freqSet.get(i).freq + oldFreq) / 2;
             }
         }
-//        for (String topic : results.keySet()) {
-//            results.get(topic).sort(new FreqComparator());
-//            int size = results.get(topic).size();
-//            for(int i = 1; i < results.get(topic).size() * 0.25; ++i) {
-//                results.get(topic).remove(size - i);
-//            }
-//        }
-        return results;
+
+        for (String item : filter1.keySet()) {
+            if (!filter2.contains(item) && filter1.get(item) == iterationTimes) {
+                result.add(item_itemFreqMap.get(item));
+            }
+        }
+
+        result.sort(new FreqComparator());
+        int size = result.size();
+        for (int i = 1; i < result.size() * 0.1; ++i) {
+            result.remove(size - i);
+        }
+        return result;
     }
 
     public static void main(String[] args) throws IOException {
@@ -414,29 +393,24 @@ public class Master {
         Master master = new Master();
         GenerateTransactions.init();// calculate tf-idf of words in each article
 
-        Map<String, List<List<ItemFreq>>> iterateResults = new HashMap<>();// store the results of each iteration
+        List<List<ItemFreq>> iterateResults = new ArrayList<>();// store the results of each iteration
         String[] topics = {"christmas", "halloween", "souls", "easter", "valentine", "romance"};
         for (int i = 0; i < master.times; ++i) {
             // master node generate the transactions
             GenerateTransactions.generate();
-
-            master.waitConn().waitFinish();
-            for (String topic : topics) {
-                if (!iterateResults.containsKey(topic)) {
-                    iterateResults.put(topic, new ArrayList<>());
-                }
-                iterateResults.get(topic).add(master.getTopicGroup(topic));
-            }
-            master.finish();
+            master.waitConn().waitFinish(i);
         }
 
-        Map<String, List<ItemFreq>> results = master.resultsMerge(iterateResults);
 
-        for (String topic : topics) {
-            System.out.println("-------------------");
-            for (ItemFreq itemFreq : results.get(topic)) {
-                System.out.println(itemFreq.item + " " + itemFreq.freq);
-            }
+        String topic = "halloween";
+        for (int i = 0; i < master.times; ++i) {
+            iterateResults.add(master.getTopicGroup(topic, i));
+        }
+        List<ItemFreq> result = master.resultsMerge(iterateResults);
+
+        System.out.println("-------------------");
+        for (ItemFreq itemFreq : result) {
+            System.out.println(itemFreq.item + " " + itemFreq.freq);
         }
 
     }
