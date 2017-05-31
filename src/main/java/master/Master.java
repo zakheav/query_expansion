@@ -41,6 +41,7 @@ public class Master {
     private static List<String> ackList;
     private final int support;
     public final int times;
+    public final double iterationFactor;
     private final List<Integer> setSizeList;
     private List<List<FreqSetObject>> freqSetList;
 
@@ -75,6 +76,7 @@ public class Master {
         // the support number of the fp-growth algorithm
         support = Integer.parseInt(masterConf.get("support"));
         times = Integer.parseInt(masterConf.get("iterationTimes"));
+        iterationFactor = Double.parseDouble(masterConf.get("iterationFactor"));
 
         freqSetList = new ArrayList<>();
         for (int i = 0; i < times; ++i) {
@@ -344,7 +346,7 @@ public class Master {
         Set<String> filter2 = new HashSet<>();// use to reject duplicate item
         for (List<ItemFreq> freqSet : iterationResults) {
             // add the correct frequent items into the results
-            for (int i = 0; i < 5 && i < freqSet.size(); ++i) {
+            for (int i = 0; i < 3 && i < freqSet.size(); ++i) {
                 String item = freqSet.get(i).item;
                 if (!filter2.contains(item)) {
                     result.add(freqSet.get(i));
@@ -357,7 +359,7 @@ public class Master {
                 item_itemFreqMap.get(item).freq = (freqSet.get(i).freq + oldFreq) / 2;
             }
             // count the number of candidate frequent item
-            for (int i = 5; i < freqSet.size(); ++i) {
+            for (int i = 3; i < freqSet.size(); ++i) {
                 String item = freqSet.get(i).item;
                 if (!filter1.containsKey(item)) {
                     filter1.put(item, 0);
@@ -374,7 +376,7 @@ public class Master {
         }
 
         for (String item : filter1.keySet()) {
-            if (!filter2.contains(item) && filter1.get(item) == iterationTimes) {
+            if (!filter2.contains(item) && filter1.get(item) >= iterationTimes * iterationFactor) {
                 result.add(item_itemFreqMap.get(item));
             }
         }
@@ -400,7 +402,8 @@ public class Master {
         }// finish training
 
         // show results
-        System.out.println("input the keywords");
+        System.out.println("----training finished!");
+        System.out.println("<<input the keywords>>");
         Scanner scanner = new Scanner(System.in);
         while (scanner.hasNext()) {
             List<List<ItemFreq>> iterateResults = new ArrayList<>();// store the results of each iteration

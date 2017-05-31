@@ -2,7 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/query_expansion_1.0.iml" filepath="$PROJECT_DIR$/query_expansion_1.0.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/query_expansion_1.0.iml" filepath="$PROJECT_DIR$/.idea/modules/query_expansion_1.0.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/query_expansion_1.0_main.iml" filepath="$PROJECT_DIR$/.idea/modules/query_expansion_1.0_main.iml" group="query_expansion_1.0" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/query_expansion_1.0_test.iml" filepath="$PROJECT_DIR$/.idea/modules/query_expansion_1.0_test.iml" group="query_expansion_1.0" />
     </modules>
   </component>
 </project>

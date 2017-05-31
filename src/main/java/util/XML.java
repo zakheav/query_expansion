@@ -39,11 +39,13 @@ public class XML {
             String setSizeList = master.elementText("setSize");
             String support = master.elementText("support");
             String iterationTimes = master.elementText("iterationTimes");
+            String iterationFactor = master.elementText("iterationFactor");
             r.put("ip", ip);
             r.put("port", port);
             r.put("setSize", setSizeList);
             r.put("support", support);
             r.put("iterationTimes", iterationTimes);
+            r.put("iterationFactor", iterationFactor);
             return r;
         } catch (DocumentException e) {
             e.printStackTrace();
