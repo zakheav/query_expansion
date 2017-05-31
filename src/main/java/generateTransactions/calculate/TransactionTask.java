@@ -100,7 +100,6 @@ public class TransactionTask implements Runnable {
         for (List<WordTfidf> transaction : transactions) {
             transaction.sort(new TfIdfComparator());
             double tfidfSum = 0.0;
-            // int freq = (int) transaction.get(transaction.size() / 2).tfidf;
             List<String> t = new ArrayList<>();
             for (WordTfidf wordTfIdf : transaction) {
                 t.add(wordTfIdf.word);
@@ -109,6 +108,5 @@ public class TransactionTask implements Runnable {
             int freq = (int) tfidfSum / t.size();
             DBHelper.storeTransaction(t, freq, title);
         }
-        // System.out.println("-------------------------------");
     }
 }

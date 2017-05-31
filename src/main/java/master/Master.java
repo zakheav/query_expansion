@@ -393,25 +393,27 @@ public class Master {
         Master master = new Master();
         GenerateTransactions.init();// calculate tf-idf of words in each article
 
-        List<List<ItemFreq>> iterateResults = new ArrayList<>();// store the results of each iteration
-        String[] topics = {"christmas", "halloween", "souls", "easter", "valentine", "romance"};
         for (int i = 0; i < master.times; ++i) {
             // master node generate the transactions
             GenerateTransactions.generate();
             master.waitConn().waitFinish(i);
+        }// finish training
+
+        // show results
+        System.out.println("input the keywords");
+        Scanner scanner = new Scanner(System.in);
+        while (scanner.hasNext()) {
+            List<List<ItemFreq>> iterateResults = new ArrayList<>();// store the results of each iteration
+            String topic = scanner.nextLine();
+            for (int i = 0; i < master.times; ++i) {
+                iterateResults.add(master.getTopicGroup(topic, i));
+            }
+            List<ItemFreq> result = master.resultsMerge(iterateResults);
+
+            System.out.println("-------------------");
+            for (ItemFreq itemFreq : result) {
+                System.out.println(itemFreq.item + " " + itemFreq.freq);
+            }
         }
-
-
-        String topic = "halloween";
-        for (int i = 0; i < master.times; ++i) {
-            iterateResults.add(master.getTopicGroup(topic, i));
-        }
-        List<ItemFreq> result = master.resultsMerge(iterateResults);
-
-        System.out.println("-------------------");
-        for (ItemFreq itemFreq : result) {
-            System.out.println(itemFreq.item + " " + itemFreq.freq);
-        }
-
     }
 }
