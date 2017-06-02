@@ -43,9 +43,7 @@ public class TFTask implements Runnable {
                     phrase += words[phraseSize - 1];
                     result.add(phrase);
                 }
-                for (int i = 1; i < phraseSize; ++i) {
-                    words[i - 1] = words[i];
-                }
+                System.arraycopy(words, 1, words, 0, phraseSize - 1);
                 words[phraseSize - 1] = "";
             }
             ptr1 = ptr2;
