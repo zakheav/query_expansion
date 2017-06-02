@@ -269,10 +269,10 @@ public class Master {
         return dataFilter;
     }
 
-    class LengthComparator implements Comparator<String> {
+    class LengthComparator implements Comparator<ItemFreq> {
         @Override
-        public int compare(String o1, String o2) {
-            return o2.length() - o1.length();
+        public int compare(ItemFreq o1, ItemFreq o2) {
+            return o2.item.length() - o1.item.length();
         }
     }
 
@@ -296,7 +296,7 @@ public class Master {
     public List<ItemFreq> getTopicGroup(String topic, int iterateId) {
         List<String> temp = new ArrayList<>();
         Map<String, Integer> map = new HashMap<>();
-        Set<String> set = new HashSet<>();// use to remove duplicate item
+
         for (FreqSetObject freqSetObject : freqSetList.get(iterateId)) {
             Set<String> freqSet = freqSetObject.freqSet;
             boolean correlate = false;
@@ -317,30 +317,18 @@ public class Master {
                 }
             }
         }
-
-        temp.sort(new LengthComparator());
         List<ItemFreq> results = new ArrayList<>();
         for (String item : temp) {
-            String[] words = item.split("-");
-            boolean flag = false;
-            for (String word : words) {
-                if (!set.contains(word)) {
-                    flag = true;
-                    set.add(word);
-                }
-            }
-            if (flag) {
-                results.add(new ItemFreq(item, map.get(item)));
-            }
+            results.add(new ItemFreq(item, map.get(item)));
         }
+
         results.sort(new FreqComparator());
         return results;
     }
 
+    // merge the results in each phase
     public List<ItemFreq> resultsMerge(List<List<ItemFreq>> iterationResults) {
-        List<ItemFreq> result = new ArrayList<>();
-
-        int iterationTimes = times;
+        List<ItemFreq> temp = new ArrayList<>();
         Map<String, ItemFreq> item_itemFreqMap = new HashMap<>();
         Map<String, Integer> filter1 = new HashMap<>();// use to remove the noise
         Set<String> filter2 = new HashSet<>();// use to reject duplicate item
@@ -349,7 +337,7 @@ public class Master {
             for (int i = 0; i < 3 && i < freqSet.size(); ++i) {
                 String item = freqSet.get(i).item;
                 if (!filter2.contains(item)) {
-                    result.add(freqSet.get(i));
+                    temp.add(freqSet.get(i));
                     filter2.add(item);
                 }
                 if (!item_itemFreqMap.containsKey(item)) {
@@ -376,17 +364,34 @@ public class Master {
         }
 
         for (String item : filter1.keySet()) {
-            if (!filter2.contains(item) && filter1.get(item) >= iterationTimes * iterationFactor) {
-                result.add(item_itemFreqMap.get(item));
+            if (!filter2.contains(item) && filter1.get(item) >= times * iterationFactor) {
+                temp.add(item_itemFreqMap.get(item));
             }
         }
-
-        result.sort(new FreqComparator());
-        int size = result.size();
-        for (int i = 1; i < result.size() * 0.1; ++i) {
-            result.remove(size - i);
+        // remove duplicate items
+        List<ItemFreq> results = new ArrayList<>();
+        temp.sort(new LengthComparator());
+        Set<String> set = new HashSet<>();// use to remove duplicate item
+        for (ItemFreq itemFreq : temp) {
+            String item = itemFreq.item;
+            String[] words = item.split("-");
+            boolean flag = false;
+            for (String word : words) {
+                if (!set.contains(word)) {
+                    flag = true;
+                    set.add(word);
+                }
+            }
+            if (flag) {
+                results.add(itemFreq);
+            }
         }
-        return result;
+        results.sort(new FreqComparator());
+        int size = results.size();
+        for (int i = 0; i < size * 0.1; ++i) {
+            results.remove(results.size() - 1);
+        }
+        return results;
     }
 
     public static void main(String[] args) throws IOException {
@@ -403,7 +408,7 @@ public class Master {
 
         // show results
         System.out.println("----training finished!");
-        System.out.println("<<input the keywords>>");
+        System.out.println("<<please input the keywords>>");
         Scanner scanner = new Scanner(System.in);
         while (scanner.hasNext()) {
             List<List<ItemFreq>> iterateResults = new ArrayList<>();// store the results of each iteration

@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Queue;
 
 public class IterationThreadPool {
-    private int SIZE = 8;
+    private int SIZE = 4;
     private final List<Thread> pool;
     private final Queue<Runnable> tasks;
     private static IterationThreadPool instance = new IterationThreadPool();

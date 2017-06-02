@@ -4,8 +4,10 @@
         <num>2</num>
     </worker>
     <master>
+        <!--ip and port of master node-->
         <ip>127.0.0.1</ip>
         <port>8080</port>
+
         <setSize>0,2</setSize>
         <!--frequency beyond 20 will be treated as frequent set-->
         <support>20</support>

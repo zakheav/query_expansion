@@ -14,7 +14,7 @@ import java.util.Map;
 
 public class DBDataSource implements DataSource {
     private List<String[]> cache = new ArrayList<>();
-    private List<Integer> counterList = new ArrayList<>();// 记录每条记录的出现次数
+    private List<Integer> counterList = new ArrayList<>();
     private int idx = 0;
 
     public DBDataSource(int flag) {
@@ -22,7 +22,7 @@ public class DBDataSource implements DataSource {
         MongoDatabase database = client.getDatabase("news");
         MongoCollection<Document> collection = database.getCollection("transactions");
 
-        // 查询事物总数
+        // query the total number of transactions
         long total = collection.count();
         FindIterable<Document> it = collection.find();
         MongoCursor<Document> cursor = it.iterator();
@@ -56,26 +56,7 @@ public class DBDataSource implements DataSource {
             ++i;
         }
 
-        // test
-//        if(flag == 1 || flag == 0) {
-//            String[] a1 = {"6", "1", "3", "4", "7", "9", "13", "16"};
-//            cache.add(a1);
-//            counterList.add(1);
-//            String[] a2 = {"1", "2", "3", "6", "12", "13", "15"};
-//            cache.add(a2);
-//            counterList.add(1);
-//            String[] a3 = {"2", "6", "8", "10", "15"};
-//            cache.add(a3);
-//            counterList.add(1);
-//        }
-//        if(flag == 2 || flag == 0) {
-//            String[] a4 = {"2", "3", "11", "19", "16"};
-//            cache.add(a4);
-//            counterList.add(1);
-//            String[] a5 = {"1", "6", "3", "5", "12", "16", "13", "14"};
-//            cache.add(a5);
-//            counterList.add(1);
-//        }
+
     }
 
     public Map<String, Object> get_nextData() {
